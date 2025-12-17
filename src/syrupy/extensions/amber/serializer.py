@@ -1,4 +1,5 @@
 import collections
+import dataclasses
 import inspect
 from collections import OrderedDict
 from collections.abc import Callable, Generator, Iterable
@@ -270,7 +271,26 @@ class AmberDataSerializer:
             serialize_method = cls.serialize_iterable
         elif isinstance(data, FunctionType):
             serialize_method = cls.serialize_function
+        elif dataclasses.is_dataclass(data) and not isinstance(data, type):
+            serialize_method = cls.serialize_dataclass
         return serialize_method(**serialize_kwargs)
+
+    @classmethod
+    def serialize_dataclass(cls, data: Any, **kwargs: Any) -> str:
+        fields = dataclasses.fields(data)
+
+        return cls.serialize_custom_iterable(
+            data=data,
+            resolve_entries=(
+                [f.name for f in fields],
+                attr_getter,
+                None  # fields only contains fields no callables.
+            ),
+            separator="=",
+            open_paren="",
+            close_paren="",
+            **kwargs,
+        )
 
     @classmethod
     def serialize_number(
